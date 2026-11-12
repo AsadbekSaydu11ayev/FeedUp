@@ -208,7 +208,6 @@ public enum APIEndpoint {
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = method.rawValue
-        request.setValue("true", forHTTPHeaderField: "ngrok-skip-browser-warning")
 
         switch self {
         case .uploadImage(let imageData, let fileName, let mimeType):

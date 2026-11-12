@@ -8,8 +8,8 @@ import Foundation
 public final class FeedUpAPIService {
     public static let shared = FeedUpAPIService()
 
-    // Global ngrok HTTPS URL (or switch to "http://localhost:5001/api" for local Simulator)
-    public var baseURL = "https://unsmooth-moneywise-tannery.ngrok-free.dev/api"
+    // Live Render production/demo URL (use "http://localhost:5001/api" for local development)
+    public var baseURL = "https://feedup-eyei.onrender.com/api"
 
     /// Root server origin without `/api` suffix (e.g. "http://localhost:5001")
     public var serverOrigin: String {

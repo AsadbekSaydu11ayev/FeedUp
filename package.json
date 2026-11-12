@@ -1,0 +1,16 @@
+{
+  "name": "feedup-platform",
+  "version": "1.0.0",
+  "description": "FeedUp Fast Food Delivery Backend, Admin Panel & Mobile REST API",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev:backend": "node backend/server.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "seed": "node backend/database.js"
+  },
+  "keywords": ["fast-food", "feedup", "delivery", "rest-api", "admin-panel", "swiftui"],
+  "author": "Senior Full-Stack Engineer",
+  "license": "ISC"
+}
+

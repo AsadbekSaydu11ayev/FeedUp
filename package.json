@@ -4,10 +4,15 @@
   "description": "FeedUp Fast Food Delivery Backend, Admin Panel & Mobile REST API",
   "scripts": {
     "start": "node backend/server.js",
+    "postinstall": "npm --prefix backend install && npm --prefix frontend install --include=dev && npm --prefix frontend run build",
+    "build": "npm --prefix backend install && npm --prefix frontend install --include=dev && npm --prefix frontend run build",
     "dev:backend": "node backend/server.js",
     "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "cd frontend && npm run build",
     "seed": "node backend/database.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "keywords": ["fast-food", "feedup", "delivery", "rest-api", "admin-panel", "swiftui"],
   "author": "Senior Full-Stack Engineer",

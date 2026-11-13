@@ -12,8 +12,7 @@ frontend/dist/
 backend/.env
 backend/.env.*
 
-# SQLite runtime database files (auto-created & seeded on startup)
-backend/data/*.db
+# SQLite runtime WAL files
 backend/data/*.db-shm
 backend/data/*.db-wal
 

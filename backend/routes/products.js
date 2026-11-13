@@ -106,7 +106,7 @@ router.post('/', (req, res) => {
     const finalPrice = parseFloat(price);
     const finalOldPrice = parseOldPrice(old_price);
     const finalCalories = calories ? parseInt(calories, 10) : 0;
-    const finalPrep = prep_time_min ? parseInt(prep_time_min, 10) : 15;
+    const finalPrep = prep_time_min ? parseInt(prep_time_min, 10) : 10;
     const finalAvailable = is_available !== undefined ? (is_available ? 1 : 0) : 1;
 
     const stmt = db.prepare(`

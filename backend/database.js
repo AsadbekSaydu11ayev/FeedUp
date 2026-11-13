@@ -35,7 +35,7 @@ function initDatabase() {
       price REAL NOT NULL,
       old_price REAL DEFAULT NULL,
       calories INTEGER DEFAULT 0,
-      prep_time_min INTEGER DEFAULT 15,
+      prep_time_min INTEGER DEFAULT 10,
       image_url TEXT NOT NULL,
       is_available INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

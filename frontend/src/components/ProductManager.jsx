@@ -57,8 +57,8 @@ export default function ProductManager({
     description: '',
     price: '',
     old_price: '',
-    calories: 500,
-    prep_time_min: 15,
+    calories: 0,
+    prep_time_min: 10,
     image_url: '',
     is_available: 1
   });
@@ -121,8 +121,8 @@ export default function ProductManager({
       description: '',
       price: '',
       old_price: '',
-      calories: 500,
-      prep_time_min: 15,
+      calories: 0,
+      prep_time_min: 10,
       image_url: '',
       is_available: 1
     });
@@ -340,7 +340,7 @@ export default function ProductManager({
       price: parseFloat(formData.price),
       old_price: parsedOldPrice,
       calories: parseInt(formData.calories, 10) || 0,
-      prep_time_min: parseInt(formData.prep_time_min, 10) || 15,
+      prep_time_min: parseInt(formData.prep_time_min, 10) || 10,
       is_available: formData.is_available ? 1 : 0
     };
 
@@ -906,7 +906,7 @@ export default function ProductManager({
                   <input
                     type="number"
                     min="0"
-                    placeholder="650"
+                    placeholder="0"
                     value={formData.calories}
                     onChange={(e) => setFormData({ ...formData, calories: e.target.value })}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#E31E24]/30 focus:border-[#E31E24]"
@@ -920,7 +920,7 @@ export default function ProductManager({
                   <input
                     type="number"
                     min="1"
-                    placeholder="15"
+                    placeholder="10"
                     value={formData.prep_time_min}
                     onChange={(e) => setFormData({ ...formData, prep_time_min: e.target.value })}
                     className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#E31E24]/30 focus:border-[#E31E24]"

@@ -66,6 +66,9 @@ export default function ProductManager({
   // Drag and Drop Upload State
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [removeBg, setRemoveBg] = useState(false);
+  const [processingBg, setProcessingBg] = useState(false);
+  const [bgStatusText, setBgStatusText] = useState('');
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -123,6 +126,9 @@ export default function ProductManager({
       image_url: '',
       is_available: 1
     });
+    setRemoveBg(false);
+    setProcessingBg(false);
+    setBgStatusText('');
     setUploadError(null);
     setIsModalOpen(true);
   };
@@ -141,6 +147,9 @@ export default function ProductManager({
       image_url: product.image_url,
       is_available: product.is_available
     });
+    setRemoveBg(false);
+    setProcessingBg(false);
+    setBgStatusText('');
     setUploadError(null);
     setIsModalOpen(true);
   };
@@ -180,6 +189,30 @@ export default function ProductManager({
     setDeleteModal({ isOpen: false, type: 'single', targetId: null, targetName: '', count: 0 });
   };
 
+  // Helper to remove background using @imgly/background-removal
+  const processImageBackgroundRemoval = async (imageSource, originalFileName = 'food') => {
+    const { removeBackground } = await import('@imgly/background-removal');
+    const blob = await removeBackground(imageSource, {
+      output: {
+        format: 'image/png',
+        quality: 0.95
+      },
+      progress: (key, current, total) => {
+        if (total > 0) {
+          const pct = Math.round((current / total) * 100);
+          setBgStatusText(`AI fonni qirqmoqda (${pct}%)`);
+        } else {
+          setBgStatusText('AI model ishlamoqda...');
+        }
+      }
+    });
+
+    const cleanName = (originalFileName || 'food')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    return new File([blob], `${cleanName}-transparent.png`, { type: 'image/png' });
+  };
+
   // Upload file logic (used by Drag & Drop and manual file picker)
   const handleUploadFile = async (file) => {
     if (!file) return;
@@ -189,11 +222,26 @@ export default function ProductManager({
       return;
     }
 
-    setUploadingImage(true);
     setUploadError(null);
+    let fileToUpload = file;
 
+    if (removeBg) {
+      setProcessingBg(true);
+      setBgStatusText('AI orqa fonni tozalashga tayyorlanmoqda...');
+      try {
+        fileToUpload = await processImageBackgroundRemoval(file, file.name);
+      } catch (err) {
+        console.error('Background removal error:', err);
+        setUploadError('Orqa fonni tozalashda xatolik: ' + (err.message || err) + '. Asl rasm yuklanadi.');
+      } finally {
+        setProcessingBg(false);
+        setBgStatusText('');
+      }
+    }
+
+    setUploadingImage(true);
     const bodyData = new FormData();
-    bodyData.append('image', file);
+    bodyData.append('image', fileToUpload);
 
     try {
       const res = await fetch('/api/upload', {
@@ -211,6 +259,41 @@ export default function ProductManager({
       setUploadError('Serverga ulanishda xatolik yuz berdi: ' + err.message);
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  // Manual one-click background removal on existing uploaded image
+  const handleRemoveCurrentBackground = async () => {
+    if (!formData.image_url || processingBg || uploadingImage) return;
+
+    setProcessingBg(true);
+    setUploadError(null);
+    setBgStatusText('AI mavjud rasm fonini tozalashga tayyorlanmoqda...');
+
+    try {
+      const transparentFile = await processImageBackgroundRemoval(formData.image_url, 'food');
+      setBgStatusText('Shaffof PNG serverga yuklanmoqda...');
+
+      const bodyData = new FormData();
+      bodyData.append('image', transparentFile);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: bodyData
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setFormData(prev => ({ ...prev, image_url: data.url }));
+      } else {
+        setUploadError(data.error || 'Yangi rasmni saqlashda xatolik yuz berdi.');
+      }
+    } catch (err) {
+      console.error('Manual background removal error:', err);
+      setUploadError('Fonni tozalashda xatolik yuz berdi: ' + (err.message || err));
+    } finally {
+      setProcessingBg(false);
+      setBgStatusText('');
     }
   };
 
@@ -847,9 +930,50 @@ export default function ProductManager({
 
               {/* DRAG AND DROP IMAGE UPLOAD AREA */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Taom rasmi (Drag & Drop yoki fayl tanlash)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Taom rasmi (Drag & Drop yoki fayl tanlash)
+                  </label>
+                </div>
+
+                {/* AI Background Removal Toggle */}
+                <div className="mb-2 p-2.5 rounded-xl bg-gradient-to-r from-red-50/70 via-orange-50/50 to-amber-50/60 border border-red-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${removeBg ? 'bg-[#E31E24] text-white shadow-xs' : 'bg-white text-gray-500 border border-gray-200'}`}>
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-gray-800">
+                          Orqa fonni tozalash (Shaffof PNG)
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-[#E31E24] font-extrabold uppercase tracking-wide">
+                          AI
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500">
+                        Rasm yuklanganda fon avtomatik olib tashlanadi va shaffof PNG qilinadi
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={removeBg}
+                    onClick={() => setRemoveBg(!removeBg)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      removeBg ? 'bg-[#E31E24]' : 'bg-gray-300'
+                    }`}
+                    title="Orqa fonni avtomatik tozalashni yoqish / o'chirish"
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        removeBg ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* Dropzone Container */}
                 <div
@@ -875,28 +999,53 @@ export default function ProductManager({
                     }}
                   />
 
-                  {uploadingImage ? (
+                  {processingBg ? (
+                    <div className="py-4 flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        {bgStatusText || 'AI orqa fonni tozalayapti...'}
+                      </span>
+                      <span className="text-[11px] text-gray-500">Shaffof PNG tayyorlanmoqda, kuting</span>
+                    </div>
+                  ) : uploadingImage ? (
                     <div className="py-4 flex flex-col items-center gap-2">
                       <div className="w-8 h-8 border-3 border-[#E31E24] border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-xs font-bold text-gray-600">Rasm yuklanmoqda...</span>
+                      <span className="text-xs font-bold text-gray-600">Rasm serverga yuklanmoqda...</span>
                     </div>
                   ) : formData.image_url ? (
                     <div className="flex items-center gap-4 w-full">
-                      <img
-                        src={formData.image_url}
-                        alt="Preview"
-                        className="w-20 h-20 rounded-xl object-cover border border-gray-200 shrink-0 shadow-xs"
-                      />
+                      {/* Checkerboard container to reveal transparency */}
+                      <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-200 shrink-0 shadow-xs bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%),linear-gradient(-45deg,#f3f4f6_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f3f4f6_75%),linear-gradient(-45deg,transparent_75%,#f3f4f6_75%)] bg-[size:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] flex items-center justify-center p-1">
+                        <img
+                          src={formData.image_url}
+                          alt="Preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                       <div className="text-left flex-1">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
-                          <CheckCircle className="w-4 h-4" /> Rasm muvaffaqiyatli yuklandi
+                          <CheckCircle className="w-4 h-4" /> Rasm tayyor
                         </div>
                         <p className="text-[11px] text-gray-500 truncate max-w-xs mt-0.5">
                           {formData.image_url}
                         </p>
-                        <p className="text-[11px] text-[#E31E24] font-semibold mt-1">
-                          Boshqa rasm tashlash yoki almashtirish uchun bosing
-                        </p>
+                        
+                        {/* 1-click background removal for already uploaded/existing image */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveCurrentBackground();
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-[#E31E24] text-[11px] font-bold border border-red-200 transition-colors cursor-pointer"
+                            title="Mavjud rasmning orqa fonini AI orqali tozalash"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" /> Orqa fonni tozalash (AI)
+                          </button>
+                          <span className="text-[11px] text-gray-400">yoki almashtirish uchun bosing</span>
+                        </div>
                       </div>
                     </div>
                   ) : (

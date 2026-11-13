@@ -191,8 +191,35 @@ export default function ProductManager({
 
   // Helper to remove background using @imgly/background-removal
   const processImageBackgroundRemoval = async (imageSource, originalFileName = 'food') => {
+    let inputBlob = imageSource;
+
+    // If imageSource is a string (e.g. relative "/uploads/..." or absolute URL), fetch it as a Blob first
+    // This prevents @imgly/background-removal from trying to fetch relative paths from its CDN (which returns 404 HTML)
+    if (typeof imageSource === 'string') {
+      const fetchUrl = imageSource.startsWith('/')
+        ? `${window.location.origin}${imageSource}`
+        : imageSource;
+
+      const response = await fetch(fetchUrl);
+      if (!response.ok) {
+        throw new Error(`Rasm serverdan yuklanmadi (HTTP ${response.status})`);
+      }
+      inputBlob = await response.blob();
+    }
+
+    // Safety check: verify blob is not an HTML 404/error page
+    if (inputBlob.type && inputBlob.type.includes('text/html')) {
+      throw new Error("Rasm manzili noto'g'ri yoki fayl topilmadi (HTML qaytdi)");
+    }
+
+    // If blob MIME type is empty or generic, ensure it's a valid image MIME type
+    if (!inputBlob.type || inputBlob.type === 'application/octet-stream') {
+      const isPng = (originalFileName || '').toLowerCase().endsWith('.png');
+      inputBlob = new Blob([inputBlob], { type: isPng ? 'image/png' : 'image/jpeg' });
+    }
+
     const { removeBackground } = await import('@imgly/background-removal');
-    const blob = await removeBackground(imageSource, {
+    const blob = await removeBackground(inputBlob, {
       output: {
         format: 'image/png',
         quality: 0.95
@@ -271,7 +298,8 @@ export default function ProductManager({
     setBgStatusText('AI mavjud rasm fonini tozalashga tayyorlanmoqda...');
 
     try {
-      const transparentFile = await processImageBackgroundRemoval(formData.image_url, 'food');
+      const fileNameFromUrl = formData.image_url.split('/').pop() || 'food';
+      const transparentFile = await processImageBackgroundRemoval(formData.image_url, fileNameFromUrl);
       setBgStatusText('Shaffof PNG serverga yuklanmoqda...');
 
       const bodyData = new FormData();
